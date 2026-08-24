@@ -3,13 +3,15 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { Wallet, User, Briefcase, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
+import { parseApiError } from "@/lib/api";
+import { Wallet, User, Briefcase, Sparkles, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const [role, setRole] = useState<"student" | "client">("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [university, setUniversity] = useState("");
   const [degree, setDegree] = useState("");
@@ -24,20 +26,20 @@ export default function RegisterPage() {
     setLoading(true);
 
     const payload = {
-      email,
+      email: email.trim().toLowerCase(),
       password,
-      full_name: fullName,
+      full_name: fullName.trim(),
       role,
-      university: role === "student" ? university : undefined,
-      degree: role === "student" ? degree : undefined,
+      university: role === "student" ? university.trim() : undefined,
+      degree: role === "student" ? degree.trim() : undefined,
       graduation_year: role === "student" ? Number(graduationYear) : undefined,
-      organization_name: role === "client" ? organizationName : undefined
+      organization_name: role === "client" ? organizationName.trim() : undefined
     };
 
     try {
       await register(payload);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Registration failed. Please check inputs.");
+      setError(parseApiError(err, "Registration failed. Please check your inputs."));
     } finally {
       setLoading(false);
     }
@@ -57,7 +59,7 @@ export default function RegisterPage() {
       <div className="grid grid-cols-2 gap-3 p-1.5 rounded-2xl bg-slate-200/80 dark:bg-slate-800">
         <button
           type="button"
-          onClick={() => setRole("student")}
+          onClick={() => { setRole("student"); setError(null); }}
           className={`py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
             role === "student"
               ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
@@ -70,7 +72,7 @@ export default function RegisterPage() {
 
         <button
           type="button"
-          onClick={() => setRole("client")}
+          onClick={() => { setRole("client"); setError(null); }}
           className={`py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
             role === "client"
               ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm"
@@ -83,9 +85,9 @@ export default function RegisterPage() {
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 shadow-sm">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="font-medium leading-relaxed">{error}</span>
         </div>
       )}
 
@@ -116,15 +118,24 @@ export default function RegisterPage() {
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Password</label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         {role === "student" ? (
@@ -198,3 +209,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

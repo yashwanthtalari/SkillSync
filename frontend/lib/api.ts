@@ -22,3 +22,26 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+
+export function parseApiError(err: any, fallbackMessage: string = "An error occurred. Please try again."): string {
+  if (!err) return fallbackMessage;
+  const detail = err.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((d: any) => {
+        if (typeof d === "string") return d;
+        if (d.msg) {
+          const field = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : "";
+          return field ? `${field}: ${d.msg}` : d.msg;
+        }
+        return d.message || JSON.stringify(d);
+      })
+      .join(". ");
+  }
+  if (detail && typeof detail === "object") {
+    return detail.message || JSON.stringify(detail);
+  }
+  return err.message || fallbackMessage;
+}
+

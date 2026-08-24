@@ -11,20 +11,29 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
+    email_clean = req.email.strip().lower()
+    full_name_clean = req.full_name.strip()
+
+    if not email_clean or not full_name_clean:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email address and full name are required."
+        )
+
     # Check email uniqueness
-    res = await db.execute(select(User).filter(User.email == req.email.lower()))
+    res = await db.execute(select(User).filter(User.email == email_clean))
     if res.scalars().first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email address already exists."
+            detail=f"An account with email '{email_clean}' already exists. Please log in instead."
         )
 
-    role_val = req.role.lower()
+    role_val = req.role.lower().strip()
     if role_val not in [UserRole.STUDENT.value, UserRole.CLIENT.value]:
         role_val = UserRole.STUDENT.value
 
     new_user = User(
-        email=req.email.lower(),
+        email=email_clean,
         password_hash=get_password_hash(req.password),
         role=role_val
     )
@@ -35,9 +44,9 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
     if role_val == UserRole.STUDENT.value:
         student_prof = StudentProfile(
             user_id=new_user.id,
-            full_name=req.full_name,
-            university=req.university or "University",
-            degree=req.degree or "Bachelor of Science",
+            full_name=full_name_clean,
+            university=req.university.strip() if req.university else "University / College",
+            degree=req.degree.strip() if req.degree else "Degree Program",
             graduation_year=req.graduation_year or 2026,
             verification_status=VerificationStatus.VERIFIED.value
         )
@@ -47,8 +56,8 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
     else:
         client_prof = ClientProfile(
             user_id=new_user.id,
-            full_name=req.full_name,
-            organization_name=req.organization_name or "Independent Client",
+            full_name=full_name_clean,
+            organization_name=req.organization_name.strip() if req.organization_name else "Independent Client",
             verification_status=VerificationStatus.VERIFIED.value
         )
         db.add(client_prof)
@@ -65,18 +74,19 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
         email=new_user.email,
         role=new_user.role,
         profile_id=profile_id,
-        full_name=req.full_name
+        full_name=full_name_clean
     )
 
 @router.post("/login", response_model=Token)
 async def login_user(req: UserLogin, db: AsyncSession = Depends(get_db)):
-    res = await db.execute(select(User).filter(User.email == req.email.lower()))
+    email_clean = req.email.strip().lower()
+    res = await db.execute(select(User).filter(User.email == email_clean))
     user = res.scalars().first()
 
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password."
+            detail="Incorrect email address or password. Please check your inputs and try again."
         )
 
     profile_id = None
@@ -105,6 +115,7 @@ async def login_user(req: UserLogin, db: AsyncSession = Depends(get_db)):
         profile_id=profile_id,
         full_name=full_name
     )
+
 
 @router.get("/me")
 async def get_me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
