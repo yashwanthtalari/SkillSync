@@ -10,9 +10,22 @@ from app.api import auth, students, clients, skills, tasks, applications, review
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-create tables if running in SQLite or quickstart mode
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("[DB SUCCESS] Database schema verified.")
+    except Exception as e:
+        print(f"[DB WARN] Primary DB schema creation skipped/failed: {e}")
+        try:
+            from app.core.database import get_fallback_sessionmaker
+            fallback_maker = get_fallback_sessionmaker()
+            async with fallback_maker.kw['bind'].begin() as fconn:
+                await fconn.run_sync(Base.metadata.create_all)
+            print("[DB FALLBACK] Fallback SQLite database schema initialized.")
+        except Exception as fe:
+            print(f"[DB WARN] Fallback DB setup failed: {fe}")
     yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

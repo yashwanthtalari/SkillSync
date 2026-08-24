@@ -1,5 +1,5 @@
 services:
-  # FastAPI Backend Web Service on Render (100% FREE - Uses Supabase for DB)
+  # FastAPI Backend Web Service on Render
   - type: web
     name: skill2pocket-backend
     env: python
@@ -7,6 +7,7 @@ services:
     buildCommand: "cd backend && pip install -r requirements.txt"
     startCommand: "cd backend && python ../database/seed/seed_data.py && gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app"
     envVars:
+      # Optional: Set to Supabase IPv4 Pooler (aws-0-xx.pooler.supabase.com:6543) or leave unset for automatic SQLite fallback
       - key: DATABASE_URL
         sync: false
       - key: SUPABASE_URL
@@ -17,3 +18,4 @@ services:
         generateValue: true
       - key: AI_PROVIDER
         value: fallback
+

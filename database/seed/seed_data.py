@@ -260,8 +260,20 @@ def seed_database():
     try:
         asyncio.run(async_seed())
     except Exception as e:
-        print(f"Error seeding database: {e}")
-        raise
+        err_str = str(e)
+        print(f"\n==================================================")
+        print(f"[SEED WARNING] Database seeding skipped or encountered an error:")
+        print(f"  {e}")
+        if "101" in err_str or "Network is unreachable" in err_str:
+            print(f"\n[TROUBLESHOOTING GUIDE FOR RENDER DEPLOYMENT]")
+            print(f"  Render free services do not support outbound IPv6 connections.")
+            print(f"  1) Direct Supabase host (db.xxx.supabase.co) resolves to IPv6 and will fail with Errno 101.")
+            print(f"  2) To fix: Use Supabase Connection Pooler (IPv4) URL in DATABASE_URL:")
+            print(f"     postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres")
+            print(f"  3) Or omit DATABASE_URL in Render Environment Variables to default to local SQLite.")
+        print(f"==================================================\n")
+        print("Continuing server startup...")
 
 if __name__ == "__main__":
     seed_database()
+
