@@ -1,13 +1,14 @@
 import os
 import sys
 import uuid
+import asyncio
 from datetime import datetime, timezone, timedelta
 
 # Append backend directory to path
 backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 sys.path.append(backend_path)
 
-from app.core.database import SyncSessionLocal, sync_engine, Base
+from app.core.database import async_engine, AsyncSessionLocal, SyncSessionLocal, sync_engine, Base
 from app.core.security import get_password_hash
 from app.models.models import (
     User, StudentProfile, ClientProfile, Skill, StudentSkill, StudentAvailability,
@@ -15,28 +16,18 @@ from app.models.models import (
     VerificationStatus, TaskStatus, ProficiencyLevel, ApplicationStatus
 )
 
-def seed_database():
-    print("Initializing Database Schema...")
-    Base.metadata.create_all(bind=sync_engine)
+async def async_seed():
+    print("Initializing Database Schema (Async)...")
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    session = SyncSessionLocal()
-
-    try:
-        # Check if already seeded
-        if session.query(User).first():
-            print("Database already contains data. Clearing existing data for a fresh seed...")
-            session.query(Review).delete()
-            session.query(TaskMatch).delete()
-            session.query(Application).delete()
-            session.query(TaskSkill).delete()
-            session.query(Task).delete()
-            session.query(StudentAvailability).delete()
-            session.query(StudentSkill).delete()
-            session.query(Skill).delete()
-            session.query(StudentProfile).delete()
-            session.query(ClientProfile).delete()
-            session.query(User).delete()
-            session.commit()
+    async with AsyncSessionLocal() as session:
+        # Check if user already exists
+        from sqlalchemy.future import select
+        res = await session.execute(select(User))
+        if res.scalars().first():
+            print("Database already contains seeded data. Skipping re-seed.")
+            return
 
         print("Seeding Skills...")
         skills_data = [
@@ -68,7 +59,7 @@ def seed_database():
             session.add(s)
             skill_objs[name] = s
 
-        session.flush()
+        await session.flush()
 
         print("Seeding Students...")
         students_info = [
@@ -93,7 +84,7 @@ def seed_database():
                 role=UserRole.STUDENT.value
             )
             session.add(u)
-            session.flush()
+            await session.flush()
 
             sp = StudentProfile(
                 id=uuid.uuid4(),
@@ -111,10 +102,9 @@ def seed_database():
                 verification_status=VerificationStatus.VERIFIED.value
             )
             session.add(sp)
-            session.flush()
+            await session.flush()
             student_objs.append(sp)
 
-            # Add student skills
             for sname, level, exp in s_skills:
                 if sname in skill_objs:
                     ss = StudentSkill(
@@ -126,7 +116,6 @@ def seed_database():
                     )
                     session.add(ss)
 
-            # Add default availability (Mon-Fri)
             for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]:
                 sa = StudentAvailability(
                     id=uuid.uuid4(),
@@ -138,7 +127,7 @@ def seed_database():
                 )
                 session.add(sa)
 
-        session.flush()
+        await session.flush()
 
         print("Seeding Clients...")
         clients_info = [
@@ -158,7 +147,7 @@ def seed_database():
                 role=UserRole.CLIENT.value
             )
             session.add(u)
-            session.flush()
+            await session.flush()
 
             cp = ClientProfile(
                 id=uuid.uuid4(),
@@ -169,7 +158,7 @@ def seed_database():
                 verification_status=VerificationStatus.VERIFIED.value
             )
             session.add(cp)
-            session.flush()
+            await session.flush()
             client_objs.append(cp)
 
         print("Seeding Tasks...")
@@ -233,7 +222,6 @@ def seed_database():
             )
         ]
 
-        task_objs = []
         for c_id, title, desc, cat, bmin, bmax, dline, hrs, wmode, t_skills in tasks_info:
             t = Task(
                 id=uuid.uuid4(),
@@ -249,8 +237,7 @@ def seed_database():
                 status=TaskStatus.OPEN.value
             )
             session.add(t)
-            session.flush()
-            task_objs.append(t)
+            await session.flush()
 
             for sname, req_lvl, imp in t_skills:
                 if sname in skill_objs:
@@ -263,20 +250,18 @@ def seed_database():
                     )
                     session.add(ts)
 
-        session.commit()
+        await session.commit()
         print("Successfully seeded Skill2Pocket database!")
         print("\n--- Seed Accounts Summary ---")
         print("Student Account: aarav.student@skill2pocket.com | Password: password123")
-        print("Student Account: priya.student@skill2pocket.com | Password: password123")
         print("Client Account:  client.rajesh@techverse.in   | Password: password123")
-        print("Client Account:  client.anita@creativeminds.io  | Password: password123")
 
+def seed_database():
+    try:
+        asyncio.run(async_seed())
     except Exception as e:
-        session.rollback()
         print(f"Error seeding database: {e}")
         raise
-    finally:
-        session.close()
 
 if __name__ == "__main__":
     seed_database()

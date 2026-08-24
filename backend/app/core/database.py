@@ -6,16 +6,25 @@ from app.core.config import settings
 
 db_url = settings.DATABASE_URL
 
-# Convert postgresql:// to postgresql+asyncpg:// if async requested, or handle sync engine
-if db_url.startswith("postgresql://"):
-    async_db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
-    sync_db_url = db_url.replace("postgresql://", "postgresql+psycopg2://")
-elif db_url.startswith("sqlite://"):
-    async_db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://")
-    sync_db_url = db_url
-elif db_url.startswith("sqlite+aiosqlite://"):
-    async_db_url = db_url
-    sync_db_url = db_url.replace("sqlite+aiosqlite://", "sqlite://")
+# Robust parsing of async vs sync database drivers
+if "postgresql" in db_url:
+    # Ensure async engine gets asyncpg driver
+    if "postgresql+asyncpg://" in db_url:
+        async_db_url = db_url
+        sync_db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    elif "postgresql+psycopg2://" in db_url:
+        sync_db_url = db_url
+        async_db_url = db_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+    else:  # standard postgresql://
+        async_db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+        sync_db_url = db_url.replace("postgresql://", "postgresql+psycopg2://")
+elif "sqlite" in db_url:
+    if "sqlite+aiosqlite://" in db_url:
+        async_db_url = db_url
+        sync_db_url = db_url.replace("sqlite+aiosqlite://", "sqlite://")
+    else:  # sqlite://
+        async_db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://")
+        sync_db_url = db_url
 else:
     async_db_url = db_url
     sync_db_url = db_url
