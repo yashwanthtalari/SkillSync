@@ -1,5 +1,5 @@
 services:
-  # FastAPI Backend Web Service
+  # FastAPI Backend Web Service on Render
   - type: web
     name: skill2pocket-backend
     env: python
@@ -8,31 +8,12 @@ services:
     startCommand: "cd backend && python ../database/seed/seed_data.py && gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app"
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: skill2pocket-db
-          property: connectionString
+        sync: false
+      - key: SUPABASE_URL
+        value: https://frrhtppatokgtyndkkub.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: sb_publishable_BBUOiZIRE2F9UvoXffXgfw_kYs2e8pr
       - key: SECRET_KEY
         generateValue: true
       - key: AI_PROVIDER
         value: fallback
-
-  # Next.js Frontend Web Service
-  - type: web
-    name: skill2pocket-frontend
-    env: node
-    region: singapore
-    buildCommand: "cd frontend && npm install && npm run build"
-    startCommand: "cd frontend && npm start"
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: skill2pocket-backend
-          property: url
-
-databases:
-  # Managed PostgreSQL Database
-  - name: skill2pocket-db
-    databaseName: skill2pocket
-    user: postgres
-    region: singapore
