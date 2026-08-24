@@ -1,78 +1,34 @@
 # Skill2Pocket — Production Deployment Guide
 
-This guide provides step-by-step instructions for deploying Skill2Pocket to production using **Docker Compose**, **Render**, **Vercel**, or **Railway + Supabase**.
+This guide provides step-by-step instructions for deploying Skill2Pocket to production using **Vercel**, **Render**, and **Supabase**.
 
 ---
 
-## Deployment Option 1: Docker & Docker Compose (Recommended)
-
-Run the entire application stack (PostgreSQL 16, FastAPI Backend, Next.js Frontend) in production containers with a single command.
-
-### Prerequisites
-- Docker Installed & Docker Compose available
-
-### Launch Production Stack
-
-```bash
-# Navigate to the root directory
-cd skill2pocket
-
-# Build and start all containers in detached mode
-docker-compose up --build -d
-```
-
-- **Frontend App**: `http://localhost:3000`
-- **FastAPI API**: `http://localhost:8000/docs`
-- **PostgreSQL Database**: `localhost:5432`
+## 📌 Repository Root Note
+The GitHub repository `github.com/yashwanthtalari/SkillSync` contains `backend/`, `frontend/`, and `database/` directly at the root level.
 
 ---
 
-## Deployment Option 2: Render.com (1-Click Blueprint)
+## 🐍 Render Setup (FastAPI Backend API)
 
-Skill2Pocket includes a `render.yaml` infrastructure-as-code blueprint file for zero-configuration cloud deployment.
-
-### Steps:
-1. Push `skill2pocket` repository to GitHub or GitLab.
-2. Log in to [Render.com](https://render.com).
-3. Click **New +** -> **Blueprints**.
-4. Connect your GitHub repository. Render will automatically detect `render.yaml` and configure:
-   - **skill2pocket-db**: Managed PostgreSQL instance
-   - **skill2pocket-backend**: FastAPI web service
-   - **skill2pocket-frontend**: Next.js web application
-5. Click **Apply**. Render will automatically provision the database, seed data, build the frontend, and link service URLs!
-
----
-
-## Deployment Option 3: Vercel (Frontend) + Supabase (DB) + Render (Backend)
-
-For optimal serverless scalability:
-
-### 1. Database Setup (Supabase)
-1. Create a project on [Supabase](https://supabase.com).
-2. Copy the PostgreSQL connection string:
-   `postgresql+asyncpg://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres`
-
-### 2. Backend API Setup (Render or Railway)
-1. Deploy `backend/` directory to Render Web Service or Railway.
-2. Set Environment Variable:
-   `DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres`
-3. Set `SECRET_KEY` to a secure random string.
-4. Render will start FastAPI with Gunicorn workers.
-
-### 3. Frontend Setup (Vercel)
-1. Import `frontend/` directory into [Vercel](https://vercel.com).
-2. Set Environment Variable:
-   `NEXT_PUBLIC_API_URL=https://your-backend-service.onrender.com/api`
-3. Click **Deploy**.
+1. Go to [Render Settings](https://dashboard.render.com).
+2. Select your `skill2pocket-backend` Web Service ➔ **Settings**.
+3. Set **Root Directory**: **Leave Empty / BLANK** (Do NOT type `skill2pocket`).
+4. Set **Build Command**:
+   ```bash
+   cd backend && pip install -r requirements.txt
+   ```
+5. Set **Start Command**:
+   ```bash
+   cd backend && python ../database/seed/seed_data.py && gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+   ```
+6. Click **Save Changes** and click **Manual Deploy** ➔ **Deploy latest commit**.
 
 ---
 
-## Production Environment Variables Reference
+## ⚡ Vercel Setup (Next.js Frontend)
 
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | PostgreSQL or SQLite connection string | `postgresql+asyncpg://user:pass@db:5432/skill2pocket` |
-| `SECRET_KEY` | JWT signing secret key | `super_secret_production_key_2026` |
-| `AI_PROVIDER` | AI task parser provider (`ollama`, `openai`, `fallback`) | `fallback` or `openai` |
-| `AI_API_KEY` | OpenAI API Key (if `AI_PROVIDER=openai`) | `sk-proj-xxxx` |
-| `NEXT_PUBLIC_API_URL` | Backend REST API endpoint URL | `http://localhost:8000/api` |
+1. Go to [Vercel Settings](https://vercel.com/dashboard).
+2. Select your project ➔ **Settings** ➔ **General**.
+3. Set **Root Directory**: `frontend` (Do NOT type `skill2pocket/frontend`).
+4. Click **Save** and trigger a redeploy!
