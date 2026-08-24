@@ -20,8 +20,9 @@ The GitHub repository contains `backend/`, `frontend/`, and `database/` at the r
    ```
 5. Set **Start Command**:
    ```bash
-   cd backend && python ../database/seed/seed_data.py && gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+   cd backend && python ../database/seed/seed_data.py && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
    ```
+
 6. Click **Save Changes** and trigger **Manual Deploy** ➔ **Deploy latest commit**.
 
 ---
