@@ -11,7 +11,7 @@ services:
         fromDatabase:
           name: skill2pocket-db
           property: connectionString
-      - key: Yashwanth159.
+      - key: SECRET_KEY
         generateValue: true
       - key: AI_PROVIDER
         value: fallback
