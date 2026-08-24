@@ -23,8 +23,12 @@ async def lifespan(app: FastAPI):
                 await fconn.run_sync(Base.metadata.create_all)
             print("[DB FALLBACK] Fallback SQLite database schema initialized.")
         except Exception as fe:
-            print(f"[DB WARN] Fallback DB setup failed: {fe}")
+            if "already exists" in str(fe):
+                pass  # Schema already created by another concurrent worker process
+            else:
+                print(f"[DB WARN] Fallback DB setup failed: {fe}")
     yield
+
 
 
 app = FastAPI(
