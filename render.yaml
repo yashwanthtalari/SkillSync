@@ -1,5 +1,5 @@
 services:
-  # FastAPI Backend Web Service on Render
+  # FastAPI Backend Web Service on Render (100% FREE - Uses Supabase for DB)
   - type: web
     name: skill2pocket-backend
     env: python
