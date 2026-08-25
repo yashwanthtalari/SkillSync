@@ -1,15 +1,16 @@
 import axios from "axios";
 
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-const API_BASE_URL = rawUrl.replace(/\/+$/, "");
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
+const API_BASE_URL = rawUrl.startsWith("http") ? rawUrl.replace(/\/+$/, "") : rawUrl;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 45000, // 45s timeout to handle Render cold starts smoothly
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json"
   }
 });
+
 
 // Interceptor to attach Auth JWT Token
 api.interceptors.request.use(
