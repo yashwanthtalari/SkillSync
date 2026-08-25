@@ -1,0 +1,10 @@
+{
+  "name": "skillsync",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "next": "16.3.2"
+  }
+}
