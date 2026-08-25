@@ -1,16 +1,17 @@
 import axios from "axios";
 import type { AxiosError, AxiosRequestConfig } from "axios";
 
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
-const API_BASE_URL = rawUrl.startsWith("http") ? rawUrl.replace(/\/+$/, "") : rawUrl;
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || "https://skillsync-q8co.onrender.com/api";
+const API_BASE_URL = rawUrl.replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 20000,
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json"
   }
 });
+
 
 api.interceptors.response.use(undefined, async (error: AxiosError) => {
   const config = error.config as (AxiosRequestConfig & { __retryCount?: number }) | undefined;
