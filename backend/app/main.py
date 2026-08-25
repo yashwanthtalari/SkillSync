@@ -27,7 +27,76 @@ async def lifespan(app: FastAPI):
                 pass  # Schema already created by another concurrent worker process
             else:
                 print(f"[DB WARN] Fallback DB setup failed: {fe}")
+
+    # Always ensure demo test accounts exist (idempotent)
+    await ensure_test_accounts()
     yield
+
+
+async def ensure_test_accounts():
+    """Idempotently create student@test.com and client@test.com on every startup."""
+    import uuid
+    from sqlalchemy.future import select
+    from app.core.database import AsyncSessionLocal
+    from app.core.security import get_password_hash
+    from app.models.models import User, StudentProfile, ClientProfile, UserRole, VerificationStatus
+
+    try:
+        async with AsyncSessionLocal() as session:
+            # ── student@test.com ──────────────────────────────────────────
+            res = await session.execute(select(User).where(User.email == "student@test.com"))
+            student_user = res.scalars().first()
+            if not student_user:
+                student_user = User(
+                    id=uuid.uuid4(),
+                    email="student@test.com",
+                    password_hash=get_password_hash("password123"),
+                    role=UserRole.STUDENT.value
+                )
+                session.add(student_user)
+                await session.flush()
+                session.add(StudentProfile(
+                    id=uuid.uuid4(),
+                    user_id=student_user.id,
+                    full_name="Test Student",
+                    university="Test University",
+                    degree="B.Tech Computer Science",
+                    graduation_year=2026,
+                    verification_status=VerificationStatus.VERIFIED.value
+                ))
+                print("[STARTUP] Created demo account: student@test.com")
+            else:
+                # Refresh password hash every restart so it's always correct
+                student_user.password_hash = get_password_hash("password123")
+
+            # ── client@test.com ───────────────────────────────────────────
+            res = await session.execute(select(User).where(User.email == "client@test.com"))
+            client_user = res.scalars().first()
+            if not client_user:
+                client_user = User(
+                    id=uuid.uuid4(),
+                    email="client@test.com",
+                    password_hash=get_password_hash("password123"),
+                    role=UserRole.CLIENT.value
+                )
+                session.add(client_user)
+                await session.flush()
+                session.add(ClientProfile(
+                    id=uuid.uuid4(),
+                    user_id=client_user.id,
+                    full_name="Test Client",
+                    organization_name="Test Organization",
+                    verification_status=VerificationStatus.VERIFIED.value
+                ))
+                print("[STARTUP] Created demo account: client@test.com")
+            else:
+                client_user.password_hash = get_password_hash("password123")
+
+            await session.commit()
+    except Exception as e:
+        print(f"[STARTUP WARN] Could not ensure test accounts: {e}")
+
+
 
 
 

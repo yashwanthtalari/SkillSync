@@ -24,8 +24,8 @@ class Token(BaseModel):
     user_id: UUID
     email: str
     role: str
-    profile_id: UUID
-    full_name: str
+    profile_id: Optional[UUID] = None
+    full_name: Optional[str] = "User"
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
