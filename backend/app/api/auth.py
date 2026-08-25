@@ -77,54 +77,21 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
         full_name=full_name_clean
     )
 
-from fastapi import Request
-
 @router.post("/login", response_model=Token)
-async def login_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-):
-    email = None
-    password = None
-
-    content_type = request.headers.get("content-type", "")
-    if "application/json" in content_type:
-        try:
-            data = await request.json()
-            email = data.get("email") or data.get("username")
-            password = data.get("password")
-        except Exception:
-            pass
-    elif "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
-        try:
-            form = await request.form()
-            email = form.get("username") or form.get("email")
-            password = form.get("password")
-        except Exception:
-            pass
-    else:
-        try:
-            data = await request.json()
-            email = data.get("email") or data.get("username")
-            password = data.get("password")
-        except Exception:
-            pass
-
-    if not email or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email address and password are required."
-        )
-
-    email_clean = str(email).strip().lower()
+async def login_user(req: UserLogin, db: AsyncSession = Depends(get_db)):
+    email_clean = req.email.strip().lower()
     res = await db.execute(select(User).filter(User.email == email_clean))
     user = res.scalars().first()
 
-    if not user or not verify_password(str(password), user.password_hash):
+    if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email address or password. Please check your inputs and try again."
         )
+
+
+
+
 
     profile_id = None
     full_name = "User"
