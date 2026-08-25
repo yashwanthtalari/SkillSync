@@ -5,6 +5,7 @@ import ipaddress
 import logging
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
@@ -134,6 +135,7 @@ Base = declarative_base()
 FALLBACK_SQLITE_URL = DEFAULT_SQLITE_URL
 fallback_async_engine = None
 fallback_sessionmaker = None
+fallback_initialized = False
 
 
 def get_fallback_sessionmaker():
@@ -153,6 +155,17 @@ def get_fallback_sessionmaker():
         )
     return fallback_sessionmaker
 
+
+async def initialize_fallback_database():
+    global fallback_initialized
+    if fallback_initialized:
+        return
+
+    fallback_sessionmaker = get_fallback_sessionmaker()
+    async with fallback_async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    fallback_initialized = True
+
 async def get_db():
     try:
         async with AsyncSessionLocal() as session:
@@ -160,19 +173,15 @@ async def get_db():
                 yield session
             finally:
                 await session.close()
-    except (OSError, Exception) as db_err:
-        err_msg = str(db_err)
-        if "Network is unreachable" in err_msg or "101" in err_msg or "Cannot connect" in err_msg:
-            print(f"[DB ERROR] PostgreSQL connection unreachable: {db_err}")
-            print(f"[DB NOTICE] Render free tier lacks IPv6. If using Supabase, switch DATABASE_URL to the IPv4 Pooler host (aws-0-xx.pooler.supabase.com:6543) or use SQLite.")
-            print(f"[DB FALLBACK] Switching request session to SQLite fallback...")
-            FallbackSession = get_fallback_sessionmaker()
-            async with FallbackSession() as fallback_session:
-                try:
-                    yield fallback_session
-                finally:
-                    await fallback_session.close()
-        else:
-            raise db_err
+    except (OSError, SQLAlchemyError) as db_err:
+        print(f"[DB ERROR] Primary database unavailable: {db_err}")
+        print("[DB FALLBACK] Switching request session to SQLite fallback...")
+        await initialize_fallback_database()
+        FallbackSession = get_fallback_sessionmaker()
+        async with FallbackSession() as fallback_session:
+            try:
+                yield fallback_session
+            finally:
+                await fallback_session.close()
 
 

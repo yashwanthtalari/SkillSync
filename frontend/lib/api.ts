@@ -1,14 +1,32 @@
 import axios from "axios";
+import type { AxiosError, AxiosRequestConfig } from "axios";
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || "/api";
 const API_BASE_URL = rawUrl.startsWith("http") ? rawUrl.replace(/\/+$/, "") : rawUrl;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 20000,
   headers: {
     "Content-Type": "application/json"
   }
+});
+
+api.interceptors.response.use(undefined, async (error: AxiosError) => {
+  const config = error.config as (AxiosRequestConfig & { __retryCount?: number }) | undefined;
+  const isTransient = !error.response && (
+    error.code === "ERR_NETWORK" ||
+    error.code === "ECONNABORTED" ||
+    error.code === "ETIMEDOUT"
+  );
+
+  if (config && isTransient && (config.__retryCount ?? 0) < 2) {
+    config.__retryCount = (config.__retryCount ?? 0) + 1;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return api.request(config);
+  }
+
+  return Promise.reject(error);
 });
 
 
@@ -31,8 +49,10 @@ export function parseApiError(err: any, fallbackMessage: string = "An error occu
   
   // Handle network disconnection or server cold-start timeouts
   if (err.message === "Network Error" || err.code === "ERR_NETWORK" || (!err.response && err.request)) {
-    return "Server connection issue. If the backend service is waking up, please wait a few seconds and try again.";
+    return "Unable to reach the server. The backend may be starting up. Please try again in a few seconds.";
   }
+
+  if (err.response?.status >= 500) return "Something went wrong on the server. Please try again.";
 
   const detail = err.response?.data?.detail;
   if (typeof detail === "string") return detail;
