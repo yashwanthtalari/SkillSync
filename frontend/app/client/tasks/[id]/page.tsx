@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Task, MatchRecommendation, Application } from "@/lib/types";
 import { MatchBadge } from "@/components/MatchBadge";
-import { Sparkles, Users, CheckCircle2, Clock, IndianRupee, Star, ShieldCheck, ArrowLeft, Send, ExternalLink, ThumbsUp } from "lucide-react";
+import { Sparkles, Users, CheckCircle2, Clock, IndianRupee, Star, ShieldCheck, ArrowLeft, Send, ExternalLink, ThumbsUp, MessageSquare, Mail } from "lucide-react";
 
 export default function ClientTaskManagePage() {
   const { id } = useParams() as { id: string };
@@ -18,6 +18,38 @@ export default function ClientTaskManagePage() {
   const [reviewComment, setReviewComment] = useState("Great communication and delivered ahead of schedule!");
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedStudentForReview, setSelectedStudentForReview] = useState<string | null>(null);
+
+  // Contact Student State
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactStudentName, setContactStudentName] = useState("");
+  const [contactStudentId, setContactStudentId] = useState("");
+  const [contactMsg, setContactMsg] = useState("");
+  const [contactSending, setContactSending] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
+  const handleSendContactMsg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactStudentId || !contactMsg.trim()) return;
+    setContactSending(true);
+    try {
+      await api.post("/notifications/send", {
+        recipient_user_id: contactStudentId,
+        title: `Task Invitation: "${task?.title}"`,
+        message: contactMsg,
+        notification_type: "invitation"
+      });
+      setContactSuccess(true);
+      setTimeout(() => {
+        setContactSuccess(false);
+        setShowContactModal(false);
+      }, 2000);
+    } catch (err: any) {
+      alert("Failed to send message to student. Please try again.");
+    } finally {
+      setContactSending(false);
+    }
+  };
+
 
   // Fetch Task Details
   const { data: task, isLoading: taskLoading } = useQuery<Task>({
@@ -217,9 +249,25 @@ export default function ClientTaskManagePage() {
                       <span>Reliability: {m.reliability_score}%</span>
                     </div>
                   </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-xs text-slate-500 font-medium">Ranked #{idx + 1} Candidate</span>
+                    <button
+                      onClick={() => {
+                        setContactStudentId(m.student_id);
+                        setContactStudentName(m.student_name);
+                        setContactMsg(`Hi ${m.student_name}, your profile is a ${m.overall_score}% AI match for our task '${task.title}'! We'd love to invite you to discuss project details.`);
+                        setShowContactModal(true);
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition-all"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> Contact Student
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+
           ) : (
             <div className="py-8 text-center text-slate-500 text-xs">No matches calculated yet.</div>
           )}
@@ -342,6 +390,65 @@ export default function ClientTaskManagePage() {
           </div>
         </div>
       )}
+
+      {/* Contact Student Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                  Contact & Invite Candidate: {contactStudentName}
+                </h3>
+              </div>
+              <button onClick={() => setShowContactModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+
+            {contactSuccess ? (
+              <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                <span>Message & Task Invitation sent to {contactStudentName} successfully!</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSendContactMsg} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Your Message / Task Invitation
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={contactMsg}
+                    onChange={(e) => setContactMsg(e.target.value)}
+                    placeholder="Type your message to the candidate..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="pt-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowContactModal(false)}
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={contactSending}
+                    className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-500/20 flex items-center gap-2"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {contactSending ? "Sending..." : "Send Invitation"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
