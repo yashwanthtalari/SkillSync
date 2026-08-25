@@ -1,9 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Only use standalone output for Docker containerization; Vercel requires standard output for serverless functions
   ...(process.env.BUILD_STANDALONE === "true" ? { output: "standalone" } : {}),
   reactStrictMode: true,
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://skillsync-q8co.onrender.com/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

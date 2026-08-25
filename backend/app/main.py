@@ -58,15 +58,24 @@ app.add_middleware(
 )
 
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 # Custom Exception Handler for Clean Errors
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Log exception internally, don't expose raw stack traces
     print(f"Unhandled Exception: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"error": {"code": "INTERNAL_SERVER_ERROR", "message": "An unexpected server error occurred."}}
+        content={"detail": "An unexpected server error occurred."}
     )
+
 
 # Include API Routers
 app.include_router(auth.router, prefix=settings.API_V1_STR)
