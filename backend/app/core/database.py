@@ -11,6 +11,9 @@ from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
+is_vercel = bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
+DEFAULT_SQLITE_URL = "sqlite+aiosqlite:////tmp/skill2pocket.db" if is_vercel else "sqlite+aiosqlite:///./skill2pocket.db"
+
 def sanitize_db_url(raw_url: str) -> str:
     """
     Sanitize database URLs by stripping quotes, handling legacy postgres:// scheme,
@@ -18,7 +21,7 @@ def sanitize_db_url(raw_url: str) -> str:
     which cause Python 3.13+ urllib.parse to raise ValueError.
     """
     if not raw_url:
-        return "sqlite+aiosqlite:///./skill2pocket.db"
+        return DEFAULT_SQLITE_URL
     
     url = raw_url.strip().strip("'\"")
     
@@ -108,8 +111,8 @@ try:
 except Exception as parse_err:
     print(f"[DB CONFIG WARN] Error parsing DATABASE_URL '{raw_url}': {parse_err}")
     print(f"[DB CONFIG WARN] Falling back to default SQLite database.")
-    async_db_url = "sqlite+aiosqlite:///./skill2pocket.db"
-    sync_db_url = "sqlite:///./skill2pocket.db"
+    async_db_url = DEFAULT_SQLITE_URL
+    sync_db_url = DEFAULT_SQLITE_URL.replace("sqlite+aiosqlite://", "sqlite://")
     async_connect_args = {"check_same_thread": False}
     sync_connect_args = {"check_same_thread": False}
     async_engine = create_async_engine(async_db_url, echo=False, connect_args=async_connect_args)
@@ -128,9 +131,10 @@ SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_eng
 Base = declarative_base()
 
 # Fallback engine & session maker for local SQLite if PostgreSQL network is unreachable
-FALLBACK_SQLITE_URL = "sqlite+aiosqlite:///./skill2pocket.db"
+FALLBACK_SQLITE_URL = DEFAULT_SQLITE_URL
 fallback_async_engine = None
 fallback_sessionmaker = None
+
 
 def get_fallback_sessionmaker():
     global fallback_async_engine, fallback_sessionmaker
