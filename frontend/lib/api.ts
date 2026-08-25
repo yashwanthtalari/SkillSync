@@ -1,9 +1,11 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_BASE_URL = rawUrl.replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 45000, // 45s timeout to handle Render cold starts smoothly
   headers: {
     "Content-Type": "application/json"
   }
@@ -25,6 +27,12 @@ api.interceptors.request.use(
 
 export function parseApiError(err: any, fallbackMessage: string = "An error occurred. Please try again."): string {
   if (!err) return fallbackMessage;
+  
+  // Handle network disconnection or server cold-start timeouts
+  if (err.message === "Network Error" || err.code === "ERR_NETWORK" || (!err.response && err.request)) {
+    return "Server connection issue. If the backend service is waking up, please wait a few seconds and try again.";
+  }
+
   const detail = err.response?.data?.detail;
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail) && detail.length > 0) {
@@ -44,4 +52,5 @@ export function parseApiError(err: any, fallbackMessage: string = "An error occu
   }
   return err.message || fallbackMessage;
 }
+
 
