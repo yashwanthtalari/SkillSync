@@ -22,12 +22,13 @@ async def async_seed():
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
-        # Check if user already exists
+        # Check if test accounts already exist
         from sqlalchemy.future import select
-        res = await session.execute(select(User))
-        if res.scalars().first():
-            print("Database already contains seeded data. Skipping re-seed.")
+        res_test = await session.execute(select(User).where(User.email == "student@test.com"))
+        if res_test.scalars().first():
+            print("Database already contains test accounts. Skipping re-seed.")
             return
+
 
         print("Seeding Skills...")
         skills_data = [
