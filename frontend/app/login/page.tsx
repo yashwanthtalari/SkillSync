@@ -59,29 +59,30 @@ export default function LoginPage() {
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => handleQuickLogin("aarav.student@skill2pocket.com")}
+            onClick={() => handleQuickLogin("student@test.com")}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-800 text-left border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-all text-xs font-medium"
           >
             <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
               <User className="w-3.5 h-3.5 text-indigo-500" />
-              Student Demo
+              Test Student
             </div>
-            <p className="text-[10px] text-slate-500 truncate">Aarav Sharma (IIT Bombay)</p>
+            <p className="text-[10px] text-slate-500 truncate">student@test.com</p>
           </button>
 
           <button
             type="button"
-            onClick={() => handleQuickLogin("client.rajesh@techverse.in")}
+            onClick={() => handleQuickLogin("client@test.com")}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-800 text-left border border-slate-200 dark:border-slate-700 hover:border-emerald-500 transition-all text-xs font-medium"
           >
             <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
               <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
-              Client Demo
+              Test Client
             </div>
-            <p className="text-[10px] text-slate-500 truncate">Rajesh (TechVerse)</p>
+            <p className="text-[10px] text-slate-500 truncate">client@test.com</p>
           </button>
         </div>
       </div>
+
 
       {error && (
         <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 shadow-sm">

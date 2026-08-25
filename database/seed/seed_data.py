@@ -63,6 +63,7 @@ async def async_seed():
 
         print("Seeding Students...")
         students_info = [
+            ("Test Student", "student@test.com", "Test University", "B.Tech Computer Science", 2026, 400.0, "remote", 99.0, 10, 5.0, [("Python", "expert", 3.0), ("React", "advanced", 2.0), ("Web Scraping", "intermediate", 1.5)]),
             ("Aarav Sharma", "aarav.student@skill2pocket.com", "IIT Bombay", "B.Tech Computer Science", 2026, 400.0, "remote", 98.0, 12, 4.9, [("Python", "expert", 3.0), ("Web Scraping", "advanced", 2.0), ("SQL", "intermediate", 1.5)]),
             ("Priya Patel", "priya.student@skill2pocket.com", "BITS Pilani", "B.E. Computer Science", 2025, 350.0, "remote", 96.0, 9, 4.8, [("React", "advanced", 2.0), ("Node.js", "intermediate", 1.5), ("Figma", "intermediate", 1.0)]),
             ("Rohan Mehta", "rohan.student@skill2pocket.com", "Delhi Technological University", "B.Tech IT", 2026, 300.0, "remote", 92.0, 6, 4.7, [("Graphic Design", "advanced", 2.5), ("Canva", "expert", 3.0), ("Logo Design", "intermediate", 1.5)]),
@@ -131,12 +132,14 @@ async def async_seed():
 
         print("Seeding Clients...")
         clients_info = [
+            ("Test Client", "client@test.com", "Test Organization"),
             ("Rajesh Agarwal", "client.rajesh@techverse.in", "TechVerse Solutions"),
             ("Anita Roy", "client.anita@creativeminds.io", "CreativeMinds Agency"),
             ("Siddharth Kapoor", "client.siddharth@growthlabs.co", "GrowthLabs Startup"),
             ("Neha Sharma", "client.neha@edulearn.org", "EduLearn India"),
             ("Manish Joshi", "client.manish@shopcraft.in", "ShopCraft E-Commerce")
         ]
+
 
         client_objs = []
         for name, email, org in clients_info:
