@@ -1,56 +1,71 @@
-# Skill2Pocket — Production Deployment Guide
+# Skill2Pocket — End-to-End Production Setup Guide
 
-This guide provides step-by-step instructions for deploying Skill2Pocket to production using **Vercel**, **Render**, and **Supabase**.
-
----
-
-## 📌 Repository Root Note
-The GitHub repository contains `backend/`, `frontend/`, and `database/` at the root level.
+This master guide provides exact step-by-step instructions to connect your **Supabase Database**, **Render Backend**, and **Vercel Frontend** into an unbroken, 100% resilient production application.
 
 ---
 
-## 🐍 Render Setup (FastAPI Backend API)
+## 📋 Step-by-Step Manual Action Items
 
-1. Go to [Render Dashboard](https://dashboard.render.com).
-2. Select your `skill2pocket-backend` Web Service ➔ **Settings**.
-3. Set **Root Directory**: **Leave Empty / BLANK**.
-4. Set **Build Command**:
-   ```bash
-   cd backend && pip install -r requirements.txt
-   ```
-5. Set **Start Command**:
-   ```bash
-   cd backend && python ../database/seed/seed_data.py && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
-   ```
+### Step 1: Connect Supabase Database to Render (Permanent Data Storage)
 
-6. Click **Save Changes** and trigger **Manual Deploy** ➔ **Deploy latest commit**.
-
----
-
-## 🛠️ Database Connection & Troubleshooting (`[Errno 101] Network is unreachable`)
-
-### Why `Errno 101 Network is unreachable` Happens on Render:
-Render free web services operate on IPv4-only network interfaces. Supabase direct database hostnames (`db.ref.supabase.co:5432`) resolve to **IPv6** addresses by default. When asyncpg or psycopg2 attempts to connect to an IPv6 address on Render, Linux returns `OSError: [Errno 101] Network is unreachable`.
-
-### Solution 1: Use Supabase IPv4 Connection Pooler (Recommended for PostgreSQL)
-1. In your Supabase Dashboard ➔ **Project Settings** ➔ **Database**.
-2. Under **Connection Pooling**, copy the pooled connection string (port `6543` or `5432`).
-3. Set the `DATABASE_URL` environment variable in Render to the pooled IPv4 URI:
-   ```env
-   DATABASE_URL=postgresql://postgres.[YOUR-PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-   ```
-   *(Note: The backend automatically handles `statement_cache_size=0` and SSL mode for Supabase Pooler).*
-
-### Solution 2: Use Zero-Config SQLite (100% Free & Automatic Fallback)
-- If `DATABASE_URL` is omitted from Render Environment Variables, the backend defaults to SQLite (`sqlite+aiosqlite:///./skill2pocket.db`).
-- The backend features automatic resilient fallback: if PostgreSQL is unreachable during deployment, requests automatically failover to local SQLite so your service stays 100% online.
+1. Open your **[Supabase Dashboard](https://supabase.com/dashboard)**.
+2. Select your project ➔ Go to **Project Settings** (gear icon) ➔ **Database**.
+3. Scroll down to the **Connection Pooling** section:
+   - Select **Mode**: `Session` (or `Transaction`).
+   - Copy the Connection String (port `6543`).
+   - Example URI format:
+     ```env
+     postgresql://postgres.frrhtppatokgtyndkkub:[YOUR-SUPABASE-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+     ```
+4. Open **[Render Dashboard](https://dashboard.render.com)** ➔ Select `skill2pocket-backend` ➔ **Environment Variables**.
+5. Add/Edit `DATABASE_URL`:
+   - Key: `DATABASE_URL`
+   - Value: *(Paste your pooled IPv4 URI from Supabase above)*
+6. Click **Save Changes**. Render will automatically trigger a new deployment.
 
 ---
 
-## ⚡ Vercel Setup (Next.js Frontend)
+### Step 2: Configure Vercel Frontend Environment Variables
 
-1. Go to [Vercel Settings](https://vercel.com/dashboard).
-2. Select your project ➔ **Settings** ➔ **General**.
-3. Set **Root Directory**: `frontend`.
-4. Click **Save** and trigger a redeploy!
+1. Open **[Vercel Dashboard](https://vercel.com/dashboard)**.
+2. Select your `skill-sync-nine-orpin` project ➔ Go to **Settings** ➔ **Environment Variables**.
+3. Add the API URL key:
+   - Key: `NEXT_PUBLIC_API_URL`
+   - Value: `https://skillsync-q8co.onrender.com/api`
+   - Environment: Select **Production**, **Preview**, and **Development**.
+4. Click **Save**.
+5. Go to the **Deployments** tab ➔ Click the `...` menu on the latest deployment ➔ **Redeploy**.
+
+---
+
+### Step 3: Prevent Render Cold Starts (Keep-Alive Health Ping)
+
+Render's free tier web services spin down after 15 minutes of inactivity. To ensure your app responds instantly (< 1 second) with zero `Network Error` popups:
+
+1. Open **[Cron-Job.org](https://cron-job.org)** (Free) or **[UptimeRobot](https://uptimerobot.com)** (Free).
+2. Create a new HTTP Cron Job:
+   - **URL**: `https://skillsync-q8co.onrender.com/`
+   - **Execution Schedule**: Every 5 or 10 minutes.
+3. Save the job. This keeps your Render container warm 24/7!
+
+---
+
+## ⚙️ Automated Backend Resiliency (Already Included in Codebase)
+
+1. **IPv6 / Direct Host Failover**: If PostgreSQL ever becomes unreachable, backend requests automatically failover to local SQLite so user requests never crash.
+2. **FastAPI CORS Regex**: Middleware dynamically approves all Vercel origin headers (`https://.*\.vercel\.app`).
+3. **45-Second Request Window**: Frontend Axios requests wait up to 45 seconds during cold starts before timing out.
+4. **Bracket & Quote Sanitizer**: Parses `DATABASE_URL` safely, stripping accidental placeholder brackets.
+
+---
+
+## ✅ End-to-End Verification Checklist
+
+- [x] Backend API Root: `https://skillsync-q8co.onrender.com/` (Returns `status: online`)
+- [x] OpenAPI Docs: `https://skillsync-q8co.onrender.com/docs`
+- [x] Frontend Live App: `https://skill-sync-nine-orpin.vercel.app`
+- [x] User Registration & Student Profile creation
+- [x] Client Task Creation & AI Analysis
+- [x] Hybrid Matching Engine Execution
+
 
